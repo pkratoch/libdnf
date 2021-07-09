@@ -22,6 +22,8 @@ along with libdnf.  If not, see <https://www.gnu.org/licenses/>.
 #include "commands/distro-sync/distro-sync.hpp"
 #include "commands/downgrade/downgrade.hpp"
 #include "commands/download/download.hpp"
+#include "commands/environmentinfo/environmentinfo.hpp"
+#include "commands/environmentlist/environmentlist.hpp"
 #include "commands/groupinfo/groupinfo.hpp"
 #include "commands/grouplist/grouplist.hpp"
 #include "commands/install/install.hpp"

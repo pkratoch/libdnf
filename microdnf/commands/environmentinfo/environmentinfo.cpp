@@ -1,37 +1,36 @@
 /*
-Copyright Contributors to the libdnf project.
+Copyright (C) 2021 Red Hat, Inc.
 
-This file is part of libdnf: https://github.com/rpm-software-management/libdnf/
+This file is part of microdnf: https://github.com/rpm-software-management/libdnf/
 
-Libdnf is free software: you can redistribute it and/or modify
+Microdnf is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
 (at your option) any later version.
 
-Libdnf is distributed in the hope that it will be useful,
+Microdnf is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with libdnf.  If not, see <https://www.gnu.org/licenses/>.
+along with microdnf.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-#include "grouplist.hpp"
+#include "environmentinfo.hpp"
 
 #include "../../context.hpp"
 
 #include <libdnf/comps/comps.hpp>
-#include <libdnf/comps/group/group.hpp>
-#include <libdnf/comps/group/query.hpp>
-#include "libdnf-cli/output/grouplist.hpp"
+#include <libdnf/comps/environment/environment.hpp>
+#include <libdnf/comps/environment/query.hpp>
+#include <libdnf/conf/option_string.hpp>
+#include "libdnf-cli/output/environmentinfo.hpp"
 
 #include <filesystem>
 #include <fstream>
 #include <set>
 
-#include <iostream>
 
 namespace microdnf {
 
@@ -39,7 +38,7 @@ namespace microdnf {
 using namespace libdnf::cli;
 
 
-GrouplistCommand::GrouplistCommand(Command & parent) : Command(parent, "grouplist") {
+EnvironmentinfoCommand::EnvironmentinfoCommand(Command & parent) : Command(parent, "environmentinfo") {
     auto & ctx = static_cast<Context &>(get_session());
     auto & parser = ctx.get_argument_parser();
     auto & cmd = *get_argument_parser_command();
@@ -50,34 +49,25 @@ GrouplistCommand::GrouplistCommand(Command & parent) : Command(parent, "grouplis
     installed_option = dynamic_cast<libdnf::OptionBool *>(
         parser.add_init_value(std::unique_ptr<libdnf::OptionBool>(new libdnf::OptionBool(false))));
 
-    hidden_option = dynamic_cast<libdnf::OptionBool *>(
-        parser.add_init_value(std::unique_ptr<libdnf::OptionBool>(new libdnf::OptionBool(false))));
-
     auto available = parser.add_new_named_arg("available");
     available->set_long_name("available");
-    available->set_short_description("show only available groups");
+    available->set_short_description("show only available environments");
     available->set_const_value("true");
     available->link_value(available_option);
 
     auto installed = parser.add_new_named_arg("installed");
     installed->set_long_name("installed");
-    installed->set_short_description("show only installed groups");
+    installed->set_short_description("show only installed environments");
     installed->set_const_value("true");
     installed->link_value(installed_option);
 
-    auto hidden = parser.add_new_named_arg("hidden");
-    hidden->set_long_name("hidden");
-    hidden->set_short_description("show also hidden groups");
-    hidden->set_const_value("true");
-    hidden->link_value(hidden_option);
-
     patterns_to_show_options = parser.add_new_values();
     auto keys = parser.add_new_positional_arg(
-        "groups_to_show",
+        "environments_to_show",
         ArgumentParser::PositionalArg::UNLIMITED,
         parser.add_init_value(std::unique_ptr<libdnf::Option>(new libdnf::OptionString(nullptr))),
         patterns_to_show_options);
-    keys->set_short_description("List of groups to show");
+    keys->set_short_description("List of environments to show");
 
     auto conflict_args =
         parser.add_conflict_args_group(std::unique_ptr<std::vector<ArgumentParser::Argument *>>(
@@ -86,7 +76,7 @@ GrouplistCommand::GrouplistCommand(Command & parent) : Command(parent, "grouplis
     available->set_conflict_arguments(conflict_args);
     installed->set_conflict_arguments(conflict_args);
 
-    cmd.set_short_description("List comps groups");
+    cmd.set_short_description("Print details about comps environments");
     cmd.set_parse_hook_func([this, &ctx](
                                 [[maybe_unused]] ArgumentParser::Argument * arg,
                                 [[maybe_unused]] const char * option,
@@ -98,12 +88,11 @@ GrouplistCommand::GrouplistCommand(Command & parent) : Command(parent, "grouplis
 
     cmd.register_named_arg(available);
     cmd.register_named_arg(installed);
-    cmd.register_named_arg(hidden);
     cmd.register_positional_arg(keys);
 }
 
 
-void GrouplistCommand::run() {
+void EnvironmentinfoCommand::run() {
     std::vector<std::string> patterns_to_show;
     if (patterns_to_show_options->size() > 0) {
         patterns_to_show.reserve(patterns_to_show_options->size());
@@ -113,7 +102,7 @@ void GrouplistCommand::run() {
         }
     }
 
-    // Load group sack
+    // Load environment sack
     // TODO(pkratoch): use comps from base and real repositories
     std::unique_ptr<libdnf::Base> base = std::make_unique<libdnf::Base>();
     libdnf::comps::Comps comps(*base.get());
@@ -121,52 +110,54 @@ void GrouplistCommand::run() {
     std::filesystem::path data_path = PROJECT_SOURCE_DIR "/test/libdnf/comps/data/";
     const char * reponame = "repo";
     comps.load_from_file(data_path / "core.xml", reponame);
+    comps.load_from_file(data_path / "core.xml", "repo2");
     comps.load_from_file(data_path / "standard.xml", reponame);
+    comps.load_from_file(data_path / "minimal-environment.xml", reponame);
+    comps.load_from_file(data_path / "custom-environment.xml", reponame);
 
-    libdnf::comps::GroupQuery query(comps.get_group_sack());
+    libdnf::comps::EnvironmentQuery query(comps.get_environment_sack());
 
     // Filter by patterns if given
     if (patterns_to_show.size() > 0) {
-        auto query_names = libdnf::comps::GroupQuery(query);
-        query.filter_groupid(patterns_to_show, libdnf::sack::QueryCmp::IGLOB);
+        auto query_names = libdnf::comps::EnvironmentQuery(query);
+        query.filter_environmentid(patterns_to_show, libdnf::sack::QueryCmp::IGLOB);
         query |= query_names.filter_name(patterns_to_show, libdnf::sack::QueryCmp::IGLOB);
-    } else if (not hidden_option->get_value()) {
-        // Filter uservisible only if patterns are not given
-        query.filter_uservisible(true);
     }
 
-    std::set<libdnf::comps::Group> group_list;
+    std::set<libdnf::comps::Environment> environment_list;
 
-    auto query_installed = libdnf::comps::GroupQuery(query);
+    auto query_installed = libdnf::comps::EnvironmentQuery(query);
     query_installed.filter_installed(true);
 
-    // --installed -> filter installed groups
+    // --installed -> filter installed environments
     if (installed_option->get_value()) {
-        group_list = query_installed.list();
+        environment_list = query_installed.list();
     // --available / all
     } else {
-        // all -> first add installed groups to the list
+        // all -> first add installed environments to the list
         if (!available_option->get_value()) {
-            for (auto group: query_installed.list()) {
-                group_list.emplace(group);
+            for (auto environment: query_installed.list()) {
+                environment_list.emplace(environment);
             }
         }
-        // --available / all -> add available not-installed groups into the list
-        auto query_available = libdnf::comps::GroupQuery(query);
+        // --available / all -> add available not-installed environments into the list
+        auto query_available = libdnf::comps::EnvironmentQuery(query);
         query_available.filter_installed(false);
-        std::set<std::string> installed_groupids;
-        for (auto group: query_installed.list()) {
-            installed_groupids.insert(group.get_groupid());
+        std::set<std::string> installed_environmentids;
+        for (auto environment: query_installed.list()) {
+            installed_environmentids.insert(environment.get_environmentid());
         }
-        for (auto group: query_available.list()) {
-            if (installed_groupids.find(group.get_groupid()) == installed_groupids.end()) {
-                group_list.emplace(group);
+        for (auto environment: query_available.list()) {
+            if (installed_environmentids.find(environment.get_environmentid()) == installed_environmentids.end()) {
+                environment_list.emplace(environment);
             }
         }
     }
 
-    libdnf::cli::output::print_grouplist_table(group_list);
+    for (auto environment : environment_list) {
+        libdnf::cli::output::print_environmentinfo_table(environment);
+        std::cout << '\n';
+    }
 }
-
 
 }  // namespace microdnf

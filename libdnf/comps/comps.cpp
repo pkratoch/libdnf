@@ -59,7 +59,6 @@ void Comps::load_installed() {
 
     FILE * xml_doc = fopen(mock_path.c_str(), "r");
     // Load comps from the file
-    // TODO(pkratoch): libsolv doesn't support environments yet
     repo_add_comps(repo, xml_doc, 0);
     fclose(xml_doc);
 }
@@ -84,7 +83,6 @@ void Comps::load_from_file(const std::string & path, const char * reponame) {
 
     FILE * xml_doc = fopen(path.c_str(), "r");
     // Load comps from the file
-    // TODO(pkratoch): libsolv doesn't support environments yet
     repo_add_comps(repo, xml_doc, 0);
     fclose(xml_doc);
 }

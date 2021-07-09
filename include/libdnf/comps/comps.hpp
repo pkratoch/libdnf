@@ -22,6 +22,7 @@ along with libdnf.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "libdnf/common/weak_ptr.hpp"
 #include "libdnf/comps/group/sack.hpp"
+#include "libdnf/comps/environment/sack.hpp"
 
 #include <memory>
 
@@ -46,12 +47,14 @@ public:
     // Load comps from given file into the pool
     void load_from_file(const std::string & path, const char * reponame);
     GroupSackWeakPtr get_group_sack() { return group_sack.get_weak_ptr(); }
+    EnvironmentSackWeakPtr get_environment_sack() { return environment_sack.get_weak_ptr(); }
 
     CompsWeakPtr get_weak_ptr();
 
 private:
     libdnf::Base & base;
     GroupSack group_sack{*this};
+    EnvironmentSack environment_sack{*this};
 
     class Impl;
     std::unique_ptr<Impl> p_impl;
@@ -59,6 +62,9 @@ private:
     friend class Group;
     friend class GroupQuery;
     friend class GroupSack;
+    friend class Environment;
+    friend class EnvironmentSack;
+    friend class EnvironmentQuery;
 };
 
 }  // namespace libdnf::comps

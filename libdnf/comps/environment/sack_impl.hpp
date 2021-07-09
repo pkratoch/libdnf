@@ -1,11 +1,11 @@
 /*
-Copyright Contributors to the libdnf project.
+Copyright (C) 2021 Red Hat, Inc.
 
 This file is part of libdnf: https://github.com/rpm-software-management/libdnf/
 
 Libdnf is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 2.1 of the License, or
+the Free Software Foundation, either version 2 of the License, or
 (at your option) any later version.
 
 Libdnf is distributed in the hope that it will be useful,
@@ -17,19 +17,28 @@ You should have received a copy of the GNU Lesser General Public License
 along with libdnf.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef LIBDNF_UTILS_XML_HPP
-#define LIBDNF_UTILS_XML_HPP
 
-#include <libxml/tree.h>
-#include <string>
+#ifndef LIBDNF_COMPS_ENVIRONMENT_SACK_IMPL_HPP
+#define LIBDNF_COMPS_ENVIRONMENT_SACK_IMPL_HPP
 
+#include "libdnf/comps/environment/sack.hpp"
 
-namespace libdnf::utils::xml {
-
-
-xmlNodePtr add_subnode_with_text(xmlNodePtr parent, std::string child_name, std::string child_text);
+namespace libdnf::comps {
 
 
-}  // namespace libdnf::utils::xml
+class EnvironmentSack::Impl {
+public:
+    explicit Impl();
+    ~Impl();
 
-#endif  // LIBDNF_UTILS_XML_HPP
+private:
+    WeakPtrGuard<EnvironmentSack, false> sack_guard;
+
+    friend EnvironmentSack;
+};
+
+
+}  // namespace libdnf::comps
+
+
+#endif  // LIBDNF_COMPS_ENVIRONMENT_SACK_IMPL_HPP
