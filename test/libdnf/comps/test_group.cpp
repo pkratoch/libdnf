@@ -248,7 +248,7 @@ void CompsGroupTest::test_dump_and_load() {
     libdnf::comps::Comps comps2(*base.get());
     comps2.load_from_file(dumped_standard_path, reponame);
 
-    libdnf::comps::GroupQuery q_dumped_standard(comps.get_group_sack());
+    libdnf::comps::GroupQuery q_dumped_standard(comps2.get_group_sack());
     q_dumped_standard.filter_groupid("standard");
     auto dumped_standard = q_dumped_standard.get();
 
