@@ -178,3 +178,25 @@ void CompsEnvironmentTest::test_dump_and_load() {
     CPPUNIT_ASSERT_EQUAL(std::string("3"), dumped_minimal_env.get_order());
     CPPUNIT_ASSERT_EQUAL(false, dumped_minimal_env.get_installed());
 }
+
+
+void CompsEnvironmentTest::test_solvables() {
+    std::filesystem::path data_path = PROJECT_SOURCE_DIR "/test/libdnf/comps/data/";
+    const char * reponame = "repo";
+    libdnf::comps::Comps comps(*base.get());
+
+    comps.load_from_file(data_path / "minimal-environment.xml", reponame);
+    comps.load_from_file(data_path / "core.xml", reponame);
+    comps.load_from_file(data_path / "core-environment.xml", reponame);
+    comps.load_from_file(data_path / "standard.xml", reponame);
+
+    libdnf::comps::EnvironmentQuery q_environments(comps.get_environment_sack());
+    auto environments = q_environments.list();
+    CPPUNIT_ASSERT_EQUAL(2lu, environments.size());
+
+    // Check that environment core is only based on the environment solvables
+    // There is a group with id core that has a translation for lang "de", but it shouldn't be used for the environment with id core.
+    q_environments.filter_environmentid("core");
+    auto core = q_environments.get();
+    CPPUNIT_ASSERT_EQUAL(std::string("Environment with the same id as an existing group."), core.get_translated_description("de"));
+}

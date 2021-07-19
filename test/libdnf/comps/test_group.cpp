@@ -273,3 +273,26 @@ void CompsGroupTest::test_dump_and_load() {
         CPPUNIT_ASSERT_EQUAL(exp_pkgs_standard[i].get_condition(), dumped_standard.get_packages()[i].get_condition());
     }
 }
+
+
+void CompsGroupTest::test_solvables() {
+    std::filesystem::path data_path = PROJECT_SOURCE_DIR "/test/libdnf/comps/data/";
+    const char * reponame = "repo";
+    libdnf::comps::Comps comps(*base.get());
+
+    comps.load_from_file(data_path / "minimal-environment.xml", reponame);
+    comps.load_from_file(data_path / "core.xml", reponame);
+    comps.load_from_file(data_path / "core-environment.xml", reponame);
+    comps.load_from_file(data_path / "standard.xml", reponame);
+
+    libdnf::comps::GroupQuery q_groups(comps.get_group_sack());
+    auto groups = q_groups.list();
+    CPPUNIT_ASSERT_EQUAL(2lu, groups.size());
+
+    // Check that group core is only based on the group solvables
+    // There is an environment with id core that has a translation for lang "ee", but it shouldn't be used for the group with id core.
+    q_groups.filter_groupid("core");
+    auto core = q_groups.get();
+    CPPUNIT_ASSERT_EQUAL(std::string("Smallest possible installation"), core.get_translated_description("ee"));
+    
+}

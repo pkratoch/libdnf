@@ -56,7 +56,6 @@ GroupQuery::GroupQuery(const GroupSackWeakPtr & sack)
             continue;
         }
         // SOLVABLE_NAME is in a form "type:id"; include only solvables of type "group"
-        // TODO(pkratoch): Test this works
         solvable_name = pool_lookup_str(pool, solvable_id, SOLVABLE_NAME);
         auto delimiter_position = solvable_name.find(":");
         if (solvable_name.substr(0, delimiter_position) != "group") {
